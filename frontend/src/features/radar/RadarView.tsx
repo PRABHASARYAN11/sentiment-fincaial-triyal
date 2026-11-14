@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Search, Star } from 'lucide-react'
+import { Search, Star, Upload } from 'lucide-react'
+const UploadIcon = Upload
 import { CountUp } from '../../components/CountUp.tsx'
 import { EmptyState, EventSkeleton, SkeletonBlock } from '../../components/States.tsx'
 import { stagger } from '../../lib/motion.ts'
 import { sentimentTone } from '../../lib/format.ts'
 import { useWatchlist } from '../../lib/watchlist.ts'
+import { api } from '../../lib/api.ts'
 import type { Dashboard, Sentiment } from '../../lib/types.ts'
 import { EventCard } from './EventCard.tsx'
 import { PulseChart } from './PulseChart.tsx'
@@ -38,6 +40,10 @@ export function RadarView({
   const [language, setLanguage] = useState('all')
   const [search, setSearch] = useState('')
   const watchlist = useWatchlist()
+  const [uploading, setUploading] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [uploadFormat, setUploadFormat] = useState('json')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const events = data?.events ?? []
 
@@ -171,6 +177,68 @@ export function RadarView({
           </span>
         )}
 
+        <label className="upload-wrap" title="Upload events" style={{ display: uploading ? 'none' : 'inline-block' }}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json,.csv,.txt,.xlsx,.pdf"
+            capture={false}
+            onChange={event => {
+              const file = event.target.files?.[0]
+              if (file) {
+                setSelectedFile(file)
+                const name = file.name.toLowerCase()
+                if (name.endsWith('.csv')) setUploadFormat('csv')
+                else if (name.endsWith('.txt')) setUploadFormat('txt')
+                else if (name.endsWith('.xlsx')) setUploadFormat('xlsx')
+                else if (name.endsWith('.pdf')) setUploadFormat('pdf')
+                else setUploadFormat('json')
+              }
+            }
+          }
+          style={{ display: 'none' }}
+          />
+          <button
+            type="button"
+            className="btn btn-accent"
+            onClick={() => fileInputRef.current?.click()}
+            title="Upload events"
+          >
+            <UploadIcon size={13} strokeWidth={2} />
+            Upload
+          </button>
+        </label>
+        {uploading ? (
+          <span className="tag" style={{ color: 'var(--accent)' }}>
+            Uploading…
+          </span>
+        ) : selectedFile ? (
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              setUploading(true)
+              api.upload('/upload', selectedFile, uploadFormat)
+                .then(() => {
+                  setSelectedFile(null)
+                  setUploadFormat('json')
+                  setUploading(false)
+                  window.location.reload()
+                })
+                .catch(() => {
+                  setSelectedFile(null)
+                  setUploadFormat('json')
+                  setUploading(false)
+                })
+            }
+          }
+            title="Upload events"
+          >
+            {selectedFile.name}
+          </button>
+        ) : (
+          <span />
+        )}
         <span className="result-count">{filtered.length} / {events.length}</span>
       </div>
 
