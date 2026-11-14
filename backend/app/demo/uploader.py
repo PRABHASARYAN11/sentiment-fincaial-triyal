@@ -254,18 +254,41 @@ def _dedupe_events(events: list[dict[str, Any]]) -> None:
     events.extend(unique)
 
 
+def _detect_language(text: str) -> str:
+    """Lightweight script-based language detection for the demo.
+
+    Returns ``en``, ``hi`` or ``te`` based on the scripts found in the
+    text. Falls back to ``en`` when the text is empty or uses only Latin
+    script with no detectable Hindi/Telugu content.
+    """
+    if not text:
+        return "en"
+    has_devanagari = any(
+        0x0900 <= ord(ch) <= 0x097F for ch in text
+    )
+    has_telugu = any(
+        0x0C00 <= ord(ch) <= 0x0C7F for ch in text
+    )
+    if has_telugu:
+        return "te"
+    if has_devanagari:
+        return "hi"
+    return "en"
+
+
 def _ingest_text(text: str, language: str | None) -> tuple[int, list[dict[str, Any]]]:
     records: list[dict[str, Any]] = []
     for line in text.splitlines():
         line = line.strip()
         if not line:
             continue
+        lang = language or _detect_language(line)
         records.append({
             "id": f"evt_live_{datetime.now(timezone.utc).timestamp():.0f}_{len(records)}",
             "title": line[:200],
             "summary": line,
             "text": line,
-            "language": language or "en",
+            "language": lang,
             "source": "upload",
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "confidence": None,
@@ -317,7 +340,8 @@ def _ingest_xlsx(data: bytes) -> tuple[int, list[dict[str, Any]]]:
         return 0, []
     records = []
     for sheet in workbook.worksheets:
-        for row in sheet.iter_rows(values_only=True):
+        rows = list(sheet.iter_rows(values_only=True))
+        for row in rows[1:] if rows else []:
             values = [str(cell).strip() if cell is not None else "" for cell in row]
             if not any(values):
                 continue
@@ -347,6 +371,7 @@ def _ingest_pdf(data: bytes) -> tuple[int, list[dict[str, Any]]]:
     except Exception:
         text = data.decode("utf-8", errors="replace")
     records = []
+    detected = _detect_language(text)
     for chunk in re.split(r"\n{2,}", text):
         chunk = chunk.strip()
         if not chunk:
@@ -356,7 +381,7 @@ def _ingest_pdf(data: bytes) -> tuple[int, list[dict[str, Any]]]:
             "title": chunk[:200],
             "summary": chunk,
             "text": chunk,
-            "language": None,
+            "language": detected,
             "source": "upload",
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "confidence": None,

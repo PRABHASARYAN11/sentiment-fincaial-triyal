@@ -1,0 +1,249 @@
+"""
+Generate a 16+ article multilingual seed dataset for the SignalRadar demo.
+Run once:  python backend/app/demo/seed_gen.py
+Writes:     backend/app/demo/events.json  (the committed seed)
+"""
+
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone, timedelta
+from pathlib import Path
+
+
+BASE = Path(__file__).resolve().parent
+OUT = BASE / "events.json"
+
+now = datetime.now(timezone.utc)
+
+EVENTS = [
+    {
+        "id": "evt_seed_1",
+        "title": "Meridian Grid Infrastructure — FY26 guidance cut after tariff order deferred",
+        "summary": "State regulator defers tariff order, prompting Meridian to cut FY26 guidance.",
+        "text": "Meridian Grid Infrastructure announced a cut to FY26 guidance after the state regulator deferred a key tariff order.",
+        "language": "en",
+        "source": "demo pull",
+        "timestamp": (now - timedelta(hours=6)).isoformat(),
+        "confidence": 0.78,
+        "impact": 50,
+        "sentiment": "Neutral",
+    },
+    {
+        "id": "evt_seed_2",
+        "title": "Surya Technologies Limited — Q3 semiconductor shipments beat estimates by 12%",
+        "summary": "Surya Technologies reported third quarter semiconductor shipments above analyst estimates on strong automotive demand.",
+        "text": "Surya Technologies Limited posted Q3 semiconductor shipments of 4.2 million units, up 12% against the consensus estimate of 3.75 million, driven by a recovery in automotive electronics orders.",
+        "language": "en",
+        "source": "demo pull",
+        "timestamp": (now - timedelta(hours=5)).isoformat(),
+        "confidence": 0.88,
+        "impact": 72,
+        "sentiment": "Bullish",
+    },
+    {
+        "id": "evt_seed_3",
+        "title": "ABC Technologies — board approves Rs 450 crore capex for new fabrication line",
+        "summary": "ABC Technologies board approved a Rs 450 crore capital expenditure plan for a new fabrication line in Hyderabad.",
+        "text": "The board of ABC Technologies approved a Rs 450 crore capex plan to set up a new fabrication line at its Hyderabad facility, targeting high-precision analog sensors for the automotive and industrial segments.",
+        "language": "en",
+        "source": "demo pull",
+        "timestamp": (now - timedelta(hours=4)).isoformat(),
+        "confidence": 0.82,
+        "impact": 68,
+        "sentiment": "Bullish",
+    },
+    {
+        "id": "evt_seed_4",
+        "title": "Nalanda Finance — deposit base grows 18% YoY to Rs 12,400 crore in September",
+        "summary": "Nalanda Finance reported an 18% year-on-year growth in its deposit base to Rs 12,400 crore for September 2026.",
+        "text": "Nalanda Finance said its deposit base grew 18% year-on-year to Rs 12,400 crore as of September 2026, with retail term deposits contributing the bulk of the growth and the average cost of deposits easing 12 basis points.",
+        "language": "en",
+        "source": "demo pull",
+        "timestamp": (now - timedelta(hours=3)).isoformat(),
+        "confidence": 0.79,
+        "impact": 64,
+        "sentiment": "Bullish",
+    },
+    {
+        "id": "evt_seed_5",
+        "title": "Vantage Steel — raw material costs rise, margin guidance trimmed by 150 bps",
+        "summary": "Vantage Steel trimmed its margin guidance by 150 basis points citing a sharp rise in coking coal and scrap prices.",
+        "text": "Vantage Steel trimmed its full-year margin guidance by 150 basis points to 9.5%-10.5% after coking coal and scrap prices rose sharply over the last six weeks, squeezing spreads on hot-rolled coil and cold-rolled coil.",
+        "language": "en",
+        "source": "demo pull",
+        "timestamp": (now - timedelta(hours=3)).isoformat(),
+        "confidence": 0.74,
+        "impact": 45,
+        "sentiment": "Bearish",
+    },
+    {
+        "id": "evt_seed_6",
+        "title": "Kalyani Auto Components — orders from two global OEMs exceed Rs 2,800 crore",
+        "summary": "Kalyani Auto Components secured fresh orders from two global OEMs worth more than Rs 2,800 crore over the next three years.",
+        "text": "Kalyani Auto Components said it has received fresh procurement orders from two global original equipment manufacturers worth more than Rs 2,800 crore to be delivered over the next three years, covering engine and transmission components.",
+        "language": "en",
+        "source": "demo pull",
+        "timestamp": (now - timedelta(hours=2)).isoformat(),
+        "confidence": 0.86,
+        "impact": 78,
+        "sentiment": "Bullish",
+    },
+    {
+        "id": "evt_seed_7",
+        "title": "Deccan Pharma Labs — USFDA flags observations at Pune formulation plant",
+        "summary": "Deccan Pharma Labs said the USFDA issued observations during a routine inspection at its Pune formulation facility.",
+        "text": "Deccan Pharma Labs said the US Food and Drug Administration issued observations during a routine pre-approval inspection at its Pune formulation plant, and the company has initiated a corrective and preventive action plan with no recall or import alert at this stage.",
+        "language": "en",
+        "source": "demo pull",
+        "timestamp": (now - timedelta(hours=2)).isoformat(),
+        "confidence": 0.71,
+        "impact": 38,
+        "sentiment": "Bearish",
+    },
+    {
+        "id": "evt_seed_8",
+        "title": "Operating Margin — sector watch: FMCG margins under pressure from input cost inflation",
+        "summary": "Operating margin watch: FMCG majors face margin pressure as edible oil and packaging input costs rise.",
+        "text": "Operating margin watch: several fast-moving consumer goods majors are facing margin pressure this quarter as edible oil and packaging input costs rise, with analysts expecting a 80-120 basis point hit to blended operating margins.",
+        "language": "en",
+        "source": "demo pull",
+        "timestamp": (now - timedelta(hours=1)).isoformat(),
+        "confidence": 0.65,
+        "impact": 42,
+        "sentiment": "Bearish",
+    },
+    {
+        "id": "evt_seed_9",
+        "title": "शुक्रवर, 14 नवंबर 2026 — सूर्या टेक्नोलिजेज लिमिटेड: तृतीय तिमाही चिप निर्यात 12% बढ़ा",
+        "summary": "सूर्या टेक्नोलिजेज लिमिटेड के तृतीय तिमाही चिप निर्यात विश्लेषक अनुमानों से 12% ऊपर रहे।",
+        "text": "सूर्या टेक्नोलिजेज लिमिटेड ने बुधवार को बताया कि उसकी तृतीय तिमाही चिप निर्यात मात्रा विश्लेषक अनुमानों से 12% ऊपर थी, जिससे स्वचालित इलेक्ट्रॉनिक्स मांग में सुधार का संकेत मिला है।",
+        "language": "hi",
+        "source": "demo pull",
+        "timestamp": (now - timedelta(hours=5)).isoformat(),
+        "confidence": 0.87,
+        "impact": 70,
+        "sentiment": "Bullish",
+    },
+    {
+        "id": "evt_seed_10",
+        "title": "ఎబిసి టెక్నాలజీస్ — హైదరాబాద్‌లో కొత్త ఫాబ్రికేషన్ లైన్‌కు 450 కోట్ల పెట్టుబడి ఆమోదం",
+        "summary": "ABC Technologies బోర్డు హైదరాబాద్ సౌకర్యానికి కొత్త ఫాబ్రికేషన్ లైన్ కోసం 450 కోట్ల పెట్టుబడిని ఆమోదించింది.",
+        "text": "ABC Technologies బోర్డు హైదరాబాద్ సౌకర్యానికి కొత్త ఫాబ్రికేషన్ లైన్ ఏర్పాటుకు 450 కోట్ల రూపాయల పెట్టుబడిని ఆమోదించింది; ఇది స్వయంచాలక మరియు పారిశ్రామిక ఖండాల కోసం అత్యంత ఖచ్చితమైన అనలాగ్ సెన్సార్లను లక్ష్యంగా చేసుకుంటుంది.",
+        "language": "te",
+        "source": "demo pull",
+        "timestamp": (now - timedelta(hours=4)).isoformat(),
+        "confidence": 0.83,
+        "impact": 66,
+        "sentiment": "Bullish",
+    },
+    {
+        "id": "evt_seed_11",
+        "title": "नलन्दा फाइनेंस — सितंबर में जमा आधार 18% की वृद्धि से 12,400 करोड़ तक",
+        "summary": "नलन्दा फाइनेंस ने सितंबर 2026 में अपने जमा आधार में वर्ष-दर-साल 18% की वृद्धि दर्ज की।",
+        "text": "नलन्दा फाइनेंस का कहना है कि सितंबर 2026 के महीने में उसका जमा आधार 12,400 करोड़ रुपये तक पहुंच गया, जिसमें खुदरा अवधि जमाएं वृद्धि की प्रमुख भूमिका निभा रही हैं और जमा की औसत लागत में 12 बेस पॉइंट की कमी आई है।",
+        "language": "hi",
+        "source": "demo pull",
+        "timestamp": (now - timedelta(hours=3)).isoformat(),
+        "confidence": 0.78,
+        "impact": 62,
+        "sentiment": "Bullish",
+    },
+    {
+        "id": "evt_seed_12",
+        "title": "వెంటేజ్ స్టీల్ — కాక్ ఇన్ఫ్లేషన్ కారణంగా मार్జిన్ గైడెన్స్ 150 బేస్ పాయింట్లు కుదించబడ్డాయి",
+        "summary": "Vantage Steel కోకింగ్ కోలా మరియు స్క్రాప్ ధరల పెంపుదల కొరకు మార్జిన్ గైడెన్స్ 150 బేస్ పాయింట్లు తగ్గించుకుంది.",
+        "text": "వెంటేజ్ స్టీల్ సంవత్సరం మొత్తం మార్జిన్ గైడెన్స్‌ను 150 బేస్ పాయింట్లు తగ్గించుకుంది; ఇది గత ఆరు వారాల పాటు కోకింగ్ కోలా మరియు స్క్రాప్ ధరల శీఘ్ర పెరుగుదల వల్ల హోట్ రోల్డ్ కోయిల్ మరియు కోల్డ్ రోల్డ్ కోయిల్ మధ్య స్ప్రెడ్లు సంకుచితమైంది.",
+        "language": "te",
+        "source": "demo pull",
+        "timestamp": (now - timedelta(hours=3)).isoformat(),
+        "confidence": 0.73,
+        "impact": 44,
+        "sentiment": "Bearish",
+    },
+    {
+        "id": "evt_seed_13",
+        "title": "कल्याणी ऑटो कंपोनेंट्स — दो वैश्विक OEM से 2,800 करोड़ से अधिक के ऑर्डर",
+        "summary": "कल्याणी ऑटो कंपोनेंट्स ने अगले तीन वर्षों में वितरण के लिए दो वैश्विक OEM से 2,800 करोड़ रुपये से अधिक के आदेश प्राप्त किए।",
+        "text": "कल्याणी ऑटो कंपोनेंट्स ने बताया कि अगले तीन वर्षों में वितरित होने वाले दो वैश्विक मूल उपकरण निर्माताओं से इंजन और ट्रांसमिशन घटकों के लिए 2,800 करोड़ रुपये से अधिक के आदेश प्राप्त हो गए हैं।",
+        "language": "hi",
+        "source": "demo pull",
+        "timestamp": (now - timedelta(hours=2)).isoformat(),
+        "confidence": 0.85,
+        "impact": 76,
+        "sentiment": "Bullish",
+    },
+    {
+        "id": "evt_seed_14",
+        "title": "డికన్ పార్మా ల్యాబ్స్ — USFDA పునే ఫార్ములేషన్ ప్లాంట్‌పై ఆపరేషనల్ అవగాహనలు జారీ చేసింది",
+        "summary": "డికన్ పార్మా ల్యాబ్స్ USFDA తన పునే ఫార్ములేషన్ సౌకర్యంపై రూటీన్ తనిఖీలో ఆపరేషనల్ అవగాహనలు జారీ చేసింది.",
+        "text": "డికన్ పార్మా ల్యాబ్స్ యూఎస్ఎఫ్డిఎ తన రూటీన్ ప్రీ-అప్రూవల్ ఇన్‌స్పెక్షన్ సమయంలో తన పునే ఫార్ములేషన్ ప్లాంట్‌పై కొన్ని ఆపరేషనల్ అవగాహనలు జారీ చేసింది మరియు ఇది ప్రస్తుతానికి ఏదీ రికాల్ లేదా ఇంపోర్ట్ అలర్ట్ కాదు; కంపెనీ సరైసల్ మరియు ప్రివెంటివ్ యాక్షన్ ప్లాన్ ప్రారంభించింది.",
+        "language": "te",
+        "source": "demo pull",
+        "timestamp": (now - timedelta(hours=2)).isoformat(),
+        "confidence": 0.70,
+        "impact": 36,
+        "sentiment": "Bearish",
+    },
+    {
+        "id": "evt_seed_15",
+        "title": "FMCG मार्जिन वाच: कच्चे माल की कीमतों में वृद्धि से बड़ी कंपनियों पर दबाव",
+        "summary": "FMCG मार्जिन वाच: खाद्य तेल और पैकेजिंग इनपुट लागत में वृद्धि के कारण प्रमुख FMCG कंपनियों के मार्जिन पर दबाव बना हुआ है।",
+        "text": "FMCG मार्जिन वाच: कई प्रमुख तेजी से बढ़ते उपभोक्ता सामान कंपनियों को इस तिमाही में खाद्य तेल और पैकेजिंग इनपुट लागत में वृद्धि के कारण मार्जिन पर दबाव का सामना करना पड़ रहा है, जिससे मिश्रित परिचालन मार्जिन में 80-120 बेस पॉइंट की गिरावट की उम्मीद है।",
+        "language": "hi",
+        "source": "demo pull",
+        "timestamp": (now - timedelta(hours=1)).isoformat(),
+        "confidence": 0.64,
+        "impact": 40,
+        "sentiment": "Bearish",
+    },
+    {
+        "id": "evt_seed_16",
+        "title": "Securities and Exchange Board — SEBI imposes penalty of Rs 5 crore on two brokers for surveillance lapses",
+        "summary": "SEBI imposed a combined penalty of Rs 5 crore on two registered brokers for failing to maintain proper surveillance mechanisms.",
+        "text": "The Securities and Exchange Board of India imposed a combined penalty of Rs 5 crore on two registered stock brokers for failing to maintain adequate surveillance mechanisms and for delayed reporting of unusual trading activity in three scrips over the past quarter.",
+        "language": "en",
+        "source": "demo pull",
+        "timestamp": (now - timedelta(hours=1)).isoformat(),
+        "confidence": 0.81,
+        "impact": 55,
+        "sentiment": "Neutral",
+    },
+    {
+        "id": "evt_seed_17",
+        "title": "Reserve Bank of India — repo rate held steady at 6.5% in November 2026 policy review",
+        "summary": "The Reserve Bank of India kept the repo rate unchanged at 6.5% in its November 2026 bi-monthly monetary policy review.",
+        "text": "The Reserve Bank of India's monetary policy committee held the repo rate steady at 6.5% in its November 2026 bi-monthly review, citing sticky core inflation and a resilient growth outlook, while maintaining an accommodative stance with room for future adjustment.",
+        "language": "en",
+        "source": "demo pull",
+        "timestamp": (now - timedelta(hours=45)).isoformat(),
+        "confidence": 0.84,
+        "impact": 60,
+        "sentiment": "Neutral",
+    },
+    {
+        "id": "evt_seed_18",
+        "title": "हिंदुस्तान कॉपर — तृतीय तिमाही नेट प्रॉफिट 9% घटने का अनुमान, तांबे की कीमतों में उतार-चढ़ाव",
+        "summary": "हिंदुस्तान कॉपर की तृतीय तिमाही नेट प्रॉफिट में 9% की गिरावट का अनुमान है, तांबे की कीमतों में उतार-चढ़ाव के बीच।",
+        "text": "हिंदुस्तान कॉपर ने आने वाली तृतीय तिमाही में नेट प्रॉफिट में 9% की गिरावट का अनुमान लगाया है, जिसका कारण तांबे की कीमतों में उतार-चढ़ाव और गर्म प्लेट 롤에 대한 원료 비용 증가입니다.",
+        "language": "hi",
+        "source": "demo pull",
+        "timestamp": (now - timedelta(hours=50)).isoformat(),
+        "confidence": 0.72,
+        "impact": 48,
+        "sentiment": "Bearish",
+    },
+]
+
+
+def main() -> None:
+    BASE.mkdir(parents=True, exist_ok=True)
+    OUT.write_text(
+        json.dumps(EVENTS, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    print(f"Wrote {len(EVENTS)} seed events to {OUT}")
+
+
+if __name__ == "__main__":
+    main()
