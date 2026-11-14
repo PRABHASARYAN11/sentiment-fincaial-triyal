@@ -257,23 +257,42 @@ def _dedupe_events(events: list[dict[str, Any]]) -> None:
 def _detect_language(text: str) -> str:
     """Lightweight script-based language detection for the demo.
 
-    Returns ``en``, ``hi`` or ``te`` based on the scripts found in the
-    text. Falls back to ``en`` when the text is empty or uses only Latin
-    script with no detectable Hindi/Telugu content.
+    Returns a language code based on the scripts found in the text:
+    Bengali, Devanagari (Hindi), Gujarati, Kannada, Malayalam,
+    Tamil, Telugu or Urdu. Falls back to ``en`` when the text uses
+    only Latin script or no script is detected.
     """
     if not text:
         return "en"
-    has_devanagari = any(
-        0x0900 <= ord(ch) <= 0x097F for ch in text
-    )
-    has_telugu = any(
-        0x0C00 <= ord(ch) <= 0x0C7F for ch in text
-    )
-    if has_telugu:
-        return "te"
-    if has_devanagari:
-        return "hi"
-    return "en"
+
+    # Script ranges (Unicode blocks)
+    scripts: dict[str, int] = {}
+
+    for ch in text:
+        cp = ord(ch)
+        if 0x0980 <= cp <= 0x09FF:  # Bengali
+            scripts["bn"] = scripts.get("bn", 0) + 1
+        elif 0x0900 <= cp <= 0x097F:  # Devanagari (Hindi/Marathi)
+            scripts["hi"] = scripts.get("hi", 0) + 1
+        elif 0x0A80 <= cp <= 0x0AFF:  # Gujarati
+            scripts["gu"] = scripts.get("gu", 0) + 1
+        elif 0x0C80 <= cp <= 0x0CFF:  # Kannada
+            scripts["kn"] = scripts.get("kn", 0) + 1
+        elif 0x0D00 <= cp <= 0x0D7F:  # Malayalam
+            scripts["ml"] = scripts.get("ml", 0) + 1
+        elif 0x0B80 <= cp <= 0x0BFF:  # Tamil
+            scripts["ta"] = scripts.get("ta", 0) + 1
+        elif 0x0C00 <= cp <= 0x0C7F:  # Telugu
+            scripts["te"] = scripts.get("te", 0) + 1
+        elif 0x0750 <= cp <= 0x077F:  # Arabic (Urdu subset)
+            scripts["ur"] = scripts.get("ur", 0) + 1
+
+    if not scripts:
+        return "en"
+
+    # Pick the script with the most characters.
+    best = max(scripts, key=scripts.get)
+    return best
 
 
 def _ingest_text(text: str, language: str | None) -> tuple[int, list[dict[str, Any]]]:

@@ -96,7 +96,12 @@ export async function loadDashboard() {
       languages: new Set(
         (events as any[]).map((e: any) => e.language),
       ).size,
-      language_labels: ["English", "Hindi", "Telugu"],
+      language_labels: [
+        "English", "Hindi", "Telugu", "Bengali", "Tamil", "Marathi",
+        "Gujarati", "Kannada", "Malayalam", "Urdu",
+        "Spanish", "French", "German", "Arabic",
+        "Portuguese", "Japanese", "Korean", "Chinese",
+      ],
     }
 
     data = {
