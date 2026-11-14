@@ -7,22 +7,23 @@ real financial text instead of only the bundled seed files.
 
 from __future__ import annotations
 
-from fastapi import UploadFile, File, Form
-import csv
-import io
+import json
 import os
 import re
 import shutil
 import tempfile
-import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from fastapi import UploadFile, File, Form
+from fastapi.responses import FileResponse
+import csv
+import io
 from ..config import BASE_DIR
 from ..api.demo import router
 
-# Where uploaded files and generated exports live.  A fresh checkout gets a
+# Where uploaded files and generated exports live. A fresh checkout gets a
 # small demo fixture created the first time this module is imported, so the UI
 # never lands on a 404 purely because there is no data yet.
 DATA_DIR = BASE_DIR / "data"
@@ -30,13 +31,9 @@ FILES_DIR = DATA_DIR / "files"
 EXPORT_DIR = DATA_DIR / "exports"
 
 # Seeded demo data lives in the same directory as the module, but uploads and
-# exports never overwrite it.  The UI can merge uploaded events on top of this.
+# exports never overwrite it. The UI can merge uploaded events on top of this.
 SEED_EVENTS_PATH = BASE_DIR / "backend" / "app" / "demo" / "events.json"
 SEED_DIVERGENCE_PATH = BASE_DIR / "backend" / "demo" / "divergence.json"
-
-STORAGE_FALLBACK = []
-if "fitz" not in globals():
-    STORAGE_FALLBACK = ["fitz"]
 
 
 def _ensure_dirs() -> None:
@@ -47,7 +44,6 @@ def _ensure_dirs() -> None:
 
 def _load_seed_events() -> list[dict[str, Any]]:
     try:
-        import json
         with open(SEED_EVENTS_PATH, "r", encoding="utf-8") as fh:
             payload = json.load(fh)
         if isinstance(payload, dict):
@@ -62,7 +58,6 @@ def _load_seed_events() -> list[dict[str, Any]]:
 
 def _load_seed_divergence() -> dict[str, Any]:
     try:
-        import json
         with open(SEED_DIVERGENCE_PATH, "r", encoding="utf-8") as fh:
             return json.load(fh)
     except Exception:
@@ -111,7 +106,9 @@ def _artifacts() -> dict[str, Any]:
                     "name": path.name,
                     "size": path.stat().st_size,
                     "mime": "text/plain",
-                    "created_at": datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat(),
+                    "created_at": datetime.fromtimestamp(
+                        path.stat().st_mtime, timezone.utc
+                    ).isoformat(),
                 })
     except Exception:
         pass
@@ -123,14 +120,17 @@ def _artifacts() -> dict[str, Any]:
                 mime = {
                     ".json": "application/json",
                     ".csv": "text/csv",
-                    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    ".xlsx": "application/vnd.openxmlformats-officedocument."
+                             "spreadsheetml.sheet",
                 }.get(suffix, "application/octet-stream")
                 result["exports"].append({
                     "id": path.name,
                     "name": path.name,
                     "size": path.stat().st_size,
                     "mime": mime,
-                    "created_at": datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat(),
+                    "created_at": datetime.fromtimestamp(
+                        path.stat().st_mtime, timezone.utc
+                    ).isoformat(),
                 })
     except Exception:
         pass
@@ -153,10 +153,9 @@ def _normalize_event(obj: Any) -> dict[str, Any] | None:
 
 
 def _events() -> list[dict[str, Any]]:
-    """Event list = seed + uploads, aid in UI decisions."""
+    """Event list = seed + uploads."""
     events = _load_seed_events()
     try:
-        import json
         for path in sorted(FILES_DIR.glob("events.json")):
             with open(path, "r", encoding="utf-8") as fh:
                 payload = json.load(fh)
@@ -187,7 +186,7 @@ def get_divergence():
 
 
 @router.post("/upload")
-def upload(file: UploadFile = File(...), format: str = Form("json")):
+async def upload(file: UploadFile = File(...), format: str = Form("json")):
     """Accept JSON, TXT, CSV, XLSX or PDF uploads."""
     _ensure_dirs()
 
@@ -197,56 +196,46 @@ def upload(file: UploadFile = File(...), format: str = Form("json")):
     if fmt not in accepted:
         return {"ok": False, "error": f"format must be one of {sorted(accepted)}"}
 
-    tmp_fd: int | None = None
-    tmp_path: Path | None = None
+    data = await file.read()
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{fmt}") as tmp:
-            shutil.copyfileobj(file.file, tmp)
-            tmp_fd = tmp.fileno()
-            tmp_path = Path(tmp.name)
+        file.file.close()
+    except Exception:
+        pass
 
-        total = 0
-        converted = []
-        if fmt == "json":
-            total, converted = _ingest_json(tmp_path)
-        elif fmt == "txt":
-            total, converted = _ingest_text(tmp_path, language=None)
-        elif fmt == "csv":
-            total, converted = _ingest_csv(tmp_path)
-        elif fmt == "xlsx":
-            total, converted = _ingest_xlsx(tmp_path)
-        elif fmt == "pdf":
-            total, converted = _ingest_pdf(tmp_path)
+    if fmt == "json":
+        total, converted = _ingest_json(data)
+    elif fmt == "txt":
+        text = data.decode("utf-8", errors="replace")
+        total, converted = _ingest_text(text, language=None)
+    elif fmt == "csv":
+        text = data.decode("utf-8", errors="replace")
+        total, converted = _ingest_csv(text)
+    elif fmt == "xlsx":
+        total, converted = _ingest_xlsx(data)
+    elif fmt == "pdf":
+        total, converted = _ingest_pdf(data)
 
-        # Persist everything uploaded so the UI can reuse the data later.
-        events_file = FILES_DIR / "events.json"
-        try:
-            existing = []
-            if events_file.exists():
-                with open(events_file, "r", encoding="utf-8") as fh:
-                    existing = json.load(fh)
-            payload = existing + converted
-            _dedupe_events(payload)
-            with open(events_file, "w", encoding="utf-8") as fh:
-                json.dump(payload, fh, indent=2, ensure_ascii=False)
-        except Exception:
-            pass
+    # Persist everything uploaded so the UI can reuse the data later.
+    events_file = FILES_DIR / "events.json"
+    try:
+        existing = []
+        if events_file.exists():
+            with open(events_file, "r", encoding="utf-8") as fh:
+                existing = json.load(fh)
+        payload = existing + converted
+        _dedupe_events(payload)
+        with open(events_file, "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, indent=2, ensure_ascii=False)
+    except Exception:
+        pass
 
-        return {
-            "ok": True,
-            "filename": original,
-            "format": fmt,
-            "events_added": total,
-            "total_events": len(_events()),
-        }
-    finally:
-        if tmp_path is not None and tmp_path.exists():
-            tmp_path.unlink(missing_ok=True)
-        if tmp_fd is not None:
-            try:
-                os.close(tmp_fd)
-            except OSError:
-                pass
+    return {
+        "ok": True,
+        "filename": original,
+        "format": fmt,
+        "events_added": total,
+        "total_events": len(_events()),
+    }
 
 
 def _dedupe_events(events: list[dict[str, Any]]) -> None:
@@ -265,9 +254,8 @@ def _dedupe_events(events: list[dict[str, Any]]) -> None:
     events.extend(unique)
 
 
-def _ingest_text(path: Path, language: str | None) -> tuple[int, list[dict[str, Any]]]:
-    text = path.read_text(encoding="utf-8", errors="replace")
-    records = []
+def _ingest_text(text: str, language: str | None) -> tuple[int, list[dict[str, Any]]]:
+    records: list[dict[str, Any]] = []
     for line in text.splitlines():
         line = line.strip()
         if not line:
@@ -285,8 +273,8 @@ def _ingest_text(path: Path, language: str | None) -> tuple[int, list[dict[str, 
     return len(records), records
 
 
-def _ingest_json(path: Path) -> tuple[int, list[dict[str, Any]]]:
-    payload = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+def _ingest_json(data: bytes) -> tuple[int, list[dict[str, Any]]]:
+    payload = json.loads(data.decode("utf-8", errors="replace"))
     records: list[dict[str, Any]] = []
     if isinstance(payload, list):
         records = [r for r in payload if _normalize_event(r)]
@@ -301,8 +289,8 @@ def _ingest_json(path: Path) -> tuple[int, list[dict[str, Any]]]:
     return len(records), records
 
 
-def _ingest_csv(path: Path) -> tuple[int, list[dict[str, Any]]]:
-    rows = list(csv.DictReader(io.TextIOWrapper(path.open("r", encoding="utf-8", errors="replace"), newline="")))
+def _ingest_csv(text: str) -> tuple[int, list[dict[str, Any]]]:
+    rows = list(csv.DictReader(io.StringIO(text)))
     records = []
     for row in rows:
         records.append({
@@ -318,12 +306,15 @@ def _ingest_csv(path: Path) -> tuple[int, list[dict[str, Any]]]:
     return len(records), records
 
 
-def _ingest_xlsx(path: Path) -> tuple[int, list[dict[str, Any]]]:
+def _ingest_xlsx(data: bytes) -> tuple[int, list[dict[str, Any]]]:
     try:
         import openpyxl
     except Exception:
         return 0, []
-    workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    try:
+        workbook = openpyxl.load_workbook(io.BytesIO(data), read_only=True, data_only=True)
+    except Exception:
+        return 0, []
     records = []
     for sheet in workbook.worksheets:
         for row in sheet.iter_rows(values_only=True):
@@ -344,17 +335,17 @@ def _ingest_xlsx(path: Path) -> tuple[int, list[dict[str, Any]]]:
     return len(records), records
 
 
-def _ingest_pdf(path: Path) -> tuple[int, list[dict[str, Any]]]:
+def _ingest_pdf(data: bytes) -> tuple[int, list[dict[str, Any]]]:
     try:
         import fitz
     except Exception:
         return 0, []
     try:
-        doc = fitz.open(str(path))
+        doc = fitz.open(stream=data, filetype="pdf")
         text_parts = [page.get_text() for page in doc]
         text = "\n".join(text_parts)
     except Exception:
-        text = path.read_text(encoding="utf-8", errors="replace")
+        text = data.decode("utf-8", errors="replace")
     records = []
     for chunk in re.split(r"\n{2,}", text):
         chunk = chunk.strip()
@@ -383,7 +374,6 @@ def ingest(events: list[dict[str, Any]]):
 
     merged: list[dict[str, Any]] = []
     try:
-        import json
         events_file = FILES_DIR / "events.json"
         if events_file.exists():
             with open(events_file, "r", encoding="utf-8") as fh:
@@ -462,6 +452,18 @@ def export(format: str = "json"):
     )
 
 
-@router.get("/demo/hello")
-def hello():
-    return {"message": "SignalRadar demo API is live."}
+@router.get("/demo/pull/live-data")
+def pull_live_data():
+    """Trigger the scheduled live-data pull."""
+    from .pull import _run_pull, _last_pulled
+
+    _run_pull()
+    return {"ok": True, "pulled_at": str(_last_pulled())}
+
+
+@router.get("/demo/data/events/seed")
+def seed_events():
+    return {"events": _load_seed_events()}
+
+
+
